@@ -90,6 +90,58 @@ if [ ! -d "/usr/local/nginx/" ]; then
 fi
 
 
+# 2021-12-01
+# mysql 5.7安装脚本 二进制包安装
+# https://downloads.mysql.com/archives/community/
+function mysql_install57()
+{
+    cd /usr/local/src/
+
+    MYSQL_DATA_DIR="/usr/local/mysql/data"
+
+    MYSQL_VERSION="mysql-5.7.35-linux-glibc2.12-x86_64"
+    # mysql
+    
+    if [ ! -f /usr/local/src/${MYSQL_VERSION}.tar.gz ]; then
+        wget https://cdn.mysql.com/archives/mysql-5.7/${MYSQL_VERSION}.tar.gz
+
+        if [ "$?" = "0" ];then
+            echo "mysql download        OK"
+        else
+            echo "mysql download     FAILD"
+            return 0
+        fi
+    fi
+
+    # add mysql user
+    groupadd mysql
+    useradd mysql -s /sbin/nologin -g mysql -M
+
+    echo "mysql configure     START"
+
+    tar xf /usr/local/src/${MYSQL_VERSION}.tar.gz
+    cp -R /usr/local/src/${MYSQL_VERSION} /usr/local/mysql
+    cd /usr/local/mysql/
+
+    chown -R mysql.mysql /usr/local/mysql
+
+    # mysql 5.7 不设置密码
+    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir=${MYSQL_DATA_DIR} --user=mysql
+
+    cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysqld
+    chmod +x /etc/init.d/mysqld
+
+    echo "[mysqld]" > /etc/my.cnf
+
+    sed -i "s#\[mysqld\]#\[mysqld\]\nbasedir = /usr/local/mysql\ndatadir = ${MYSQL_DATA_DIR}\nport = 3306\nserver_id = 1\nsocket = /tmp/mysql.sock\nlog-bin=mysql-bin\n\nslow-query-log=1\nlong_query_time = 1\nslow-query-log-file=/usr/local/mysql/slow-query.log\n\nsql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES\n\n#g" /etc/my.cnf
+
+    echo "mysql configure     END"
+
+    echo "/usr/local/lib\n/usr/local/mysql/lib" > /etc/ld.so.conf.d/libc.conf
+    ldconfig
+
+    cd /usr/local/src/
+}
 
 
 
